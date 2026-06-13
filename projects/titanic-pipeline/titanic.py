@@ -1,5 +1,6 @@
 import pandas as pd
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
@@ -9,17 +10,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report,confusion_matrix
 
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
 df = pd.read_csv(url)
-
-print(df.head())
-print(df.shape)
-
-print(df.isnull().sum())
-print(df.describe())
 
 def age_group(age):
     if age < 13:
@@ -80,29 +73,28 @@ model = Pipeline(steps=[
 
 model.fit(X_train,y_train)
 
-accuracy = model.score(X_test,y_test)
-print("Accuracy:",accuracy)
+y_pred = model.predict(X_test)
 
-predictions = model.predict(X_test)
-print(predictions)
-print(predictions[:100])
+print("Accuracy:", model.score(X_test, y_test))
 
 print("\nConfusion Matrix:")
-print(confusion_matrix(y_test, predictions))
+print(confusion_matrix(y_test, y_pred))
 
 print("\nClassification Report:")
-print(classification_report(y_test, predictions))
+print(classification_report(y_test, y_pred))
 
-probabilities = model.predict_proba(X_test[:5])
-print(probabilities)
+print("\nSample probabilities:")
+print(model.predict_proba(X_test[:5]))
 
+print("\nSurvival rate by Sex:")
 print(df.groupby("Sex")["Survived"].mean())
 
+print("\nSurvival rate by Class:")
 print(df.groupby("Pclass")["Survived"].mean())
 
+print("\nSurvival rate by AgeGroup:")
 print(df.groupby("AgeGroup")["Survived"].mean())
 
 sns.countplot(x="Sex", hue="Survived", data=df)
 plt.show()
 
-print(df.columns)
