@@ -40,8 +40,15 @@ df["Title"] = df["Name"].str.extract(r" ([A-Za-z]+)\.", expand=False)
 
 # FEATURES / TARGET
 
-features = ["Pclass", "Sex", "AgeGroup", "IsRich",
-            "FamilySize", "HasCabin", "Title"]
+features = [
+    "Pclass",
+    "Sex",
+    "AgeGroup",
+    "IsRich",
+    "FamilySize",
+    "HasCabin",
+    "Title"
+]
 
 target = "Survived"
 
@@ -60,19 +67,22 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 
 categorical_features = ["Pclass", "Sex", "AgeGroup", "Title"]
+numeric_features = ["IsRich", "FamilySize", "HasCabin"]
 
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("cat", Pipeline([
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("encoder", OneHotEncoder(handle_unknown="ignore"))
-        ]), categorical_features),
+categorical_pipeline = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("encoder", OneHotEncoder(handle_unknown="ignore"))
+])
 
-        ("num", Pipeline([
-            ("imputer", SimpleImputer(strategy="mean"))
-        ]), ["IsRich", "FamilySize", "HasCabin"])
-    ]
-)
+numeric_pipeline = Pipeline([
+    ("imputer", SimpleImputer(strategy="mean"))
+])
+
+preprocessor = ColumnTransformer([
+    ("cat", categorical_pipeline, categorical_features),
+    ("num", numeric_pipeline, numeric_features)
+])
+
 
 
 # MODEL PIPELINE
@@ -91,10 +101,24 @@ model = Pipeline(steps=[
 
 model.fit(X_train, y_train)
 
+encoder = model.named_steps["preprocessor"] \
+              .named_transformers_["cat"] \
+              .named_steps["encoder"]
+
+encoded_cat_features = encoder.get_feature_names_out(categorical_features)
+
+all_features = list(encoded_cat_features) + numeric_features
+
 rf = model.named_steps["classifier"]
-print(rf.feature_importances_)
 
 
+feature_importance = pd.DataFrame({
+    "feature": all_features,
+    "importance": rf.feature_importances_
+}).sort_values(by="importance", ascending=False)
+
+print("\nFEATURE IMPORTANCE:")
+print(feature_importance)
 
 
 #  EVALUATION
