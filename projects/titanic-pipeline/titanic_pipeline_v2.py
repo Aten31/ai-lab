@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import Pipeline
@@ -121,6 +122,18 @@ print("\nFEATURE IMPORTANCE:")
 print(feature_importance)
 
 
+encoded_feature_names = model.named_steps["preprocessor"]\
+    .get_feature_names_out()
+
+importances = model.named_steps["classifier"].feature_importances_
+
+importance_df = pd.DataFrame({
+    "Feature": encoded_feature_names,
+    "Importance": importances
+}).sort_values(by="Importance", ascending=False)
+
+print(importance_df)
+
 #  EVALUATION
 
 y_pred = model.predict(X_test)
@@ -136,6 +149,44 @@ print("\nROC-AUC SCORE:")
 print(roc_auc_score(y_test, y_proba))
 
 
+results = X_test.copy()
+results["Actual"] = y_test.values
+results["Predicted"] = y_pred
+results["Correct"] = results["Actual"] == results["Predicted"]
+
+mistakes = results[results["Correct"] == False]
+
+print("\nWRONG PREDICTIONS:")
+print(mistakes.head(20))
+
+print("\nWRONG PREDICTIONS BY SEX:")
+print(mistakes.groupby("Sex").size())
+
+print("\nWRONG PREDICTIONS BY PCLASS:")
+print(mistakes.groupby("Pclass").size())
+
+print("\nWRONG PREDICTIONS BY AGE GROUP:")
+print(mistakes.groupby("AgeGroup").size())
+
+false_positive = mistakes[
+    (mistakes["Predicted"] == 1) & (mistakes["Actual"] == 0)
+]
+
+false_negative = mistakes[
+    (mistakes["Predicted"] == 0) & (mistakes["Actual"] == 1)
+]
+
+print("\nFalse Positives:", len(false_positive))
+print("False Negatives:", len(false_negative))
+
+for col in ["Sex", "Pclass", "AgeGroup"]:
+    total = X_test.groupby(col).size()
+    wrong_count = mistakes.groupby(col).size()
+    error_rate = (wrong_count / total * 100).fillna(0)
+    
+    print(f"\nERROR RATE BY {col}:")
+    print(error_rate)
+
 # CROSS VALIDATION 
 
 cv_scores = cross_val_score(
@@ -146,3 +197,8 @@ print("\nCROSS VALIDATION AUC:")
 print(cv_scores)
 print("Mean AUC:", cv_scores.mean())
 print("Std AUC:", cv_scores.std())
+
+
+sns.countplot(x="Pclass", data=mistakes)
+plt.title("Wrong Predictions by Passenger Class")
+plt.show()
